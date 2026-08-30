@@ -3,616 +3,780 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Territory Wars</title>
+<title>Legions Survival</title>
 <style>
   :root {
-    --blue: #3b7dd8;
-    --blue-dark: #1e4f99;
-    --red: #d84f3b;
-    --red-dark: #99311e;
-    --neutral: #cfd4da;
-    --bg: #10131a;
-    --panel: #1b2030;
-    --text: #eef1f7;
-    --accent: #f2c14e;
+    --bg: #05070d;
+    --panel: #10141f;
+    --panel2: #161c2b;
+    --border: #232b3d;
+    --accent: #4de3c1;
+    --accent-dim: #2a7d6c;
+    --danger: #ff5d5d;
+    --warn: #f2c14e;
+    --text: #e8ecf5;
+    --text-dim: #8b93a8;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0; padding: 0; height: 100%;
-    background: var(--bg); color: var(--text);
+    background: radial-gradient(circle at 50% 0%, #0d1220 0%, #05070d 60%);
+    color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     touch-action: manipulation;
     overscroll-behavior: none;
-    user-select: none;
   }
   #app {
     max-width: 480px;
     margin: 0 auto;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    padding: 10px 12px 16px;
+    padding: 10px 12px 8px;
   }
   h1 {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     text-align: center;
-    margin: 4px 0 10px;
-    letter-spacing: 0.5px;
+    margin: 4px 0 2px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
   }
   h1 span { color: var(--accent); }
+  .subtitle { text-align: center; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 10px; letter-spacing: 0.5px; }
+
   #hud {
     display: flex;
     justify-content: space-between;
     background: var(--panel);
-    border-radius: 10px;
-    padding: 8px 12px;
-    margin-bottom: 8px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
     font-size: 0.85rem;
   }
-  .hud-side { display: flex; flex-direction: column; gap: 2px; }
-  .hud-side.p2 { text-align: right; }
-  .hud-gold { color: var(--accent); font-weight: 600; }
-  #turnInfo {
-    text-align: center;
-    font-size: 0.8rem;
-    color: #aab2c5;
-    margin-bottom: 6px;
-    min-height: 1.1em;
-  }
-  #boardWrap {
+  #hud .name { font-weight: 700; color: var(--accent); }
+  #hud .res { display: flex; gap: 14px; margin-top: 4px; }
+  #hud .res span { color: var(--text-dim); }
+  #hud .res b { color: var(--text); }
+
+  #tabs {
     display: flex;
-    justify-content: center;
+    gap: 6px;
     margin-bottom: 10px;
   }
-  canvas {
-    background: #0c0f16;
-    border-radius: 8px;
-    border: 2px solid #2a3040;
-    touch-action: none;
-    max-width: 100%;
-    height: auto;
-  }
-  #log {
-    background: var(--panel);
-    border-radius: 10px;
-    padding: 8px 12px;
-    font-size: 0.78rem;
-    color: #c4cadb;
-    min-height: 2.6em;
-    max-height: 4.4em;
-    overflow-y: auto;
-    margin-bottom: 10px;
-    line-height: 1.35em;
-  }
-  #controls {
-    display: flex;
-    gap: 8px;
-  }
-  button {
+  .tabBtn {
     flex: 1;
-    padding: 12px 8px;
+    padding: 10px 4px;
+    text-align: center;
+    background: var(--panel);
+    border: 1px solid var(--border);
     border-radius: 10px;
-    border: none;
-    font-size: 0.95rem;
+    font-size: 0.72rem;
     font-weight: 600;
+    color: var(--text-dim);
     cursor: pointer;
   }
-  #endTurnBtn { background: var(--blue); color: white; }
-  #endTurnBtn:active { background: var(--blue-dark); }
-  #resetBtn { background: #3a3f4f; color: var(--text); flex: 0 0 auto; padding: 12px 14px; }
-  #resetBtn:active { background: #262b38; }
+  .tabBtn.active { background: var(--accent-dim); color: var(--text); border-color: var(--accent); }
 
-  /* Modal for recruiting */
-  #modalOverlay {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.55);
-    display: none;
-    align-items: flex-end;
-    justify-content: center;
-    z-index: 10;
-  }
-  #modalOverlay.show { display: flex; }
-  #modal {
+  #content { flex: 1; }
+  .card {
     background: var(--panel);
-    width: 100%;
-    max-width: 480px;
-    border-radius: 16px 16px 0 0;
-    padding: 16px;
-    animation: slideUp 0.15s ease-out;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
   }
-  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-  #modal h3 { margin: 0 0 10px; font-size: 1rem; }
-  .unitOption {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #262b3c;
-    border-radius: 10px;
-    padding: 10px 14px;
-    margin-bottom: 8px;
-  }
-  .unitOption.disabled { opacity: 0.4; }
-  .unitOption .name { font-weight: 600; }
-  .unitOption .stats { font-size: 0.75rem; color: #9aa2b8; }
-  .unitOption button { flex: 0 0 auto; background: var(--accent); color: #2b2100; padding: 8px 16px; }
-  #modalCancel { background: #3a3f4f; color: var(--text); margin-top: 4px; }
+  .card h3 { margin: 0 0 10px; font-size: 0.95rem; color: var(--accent); }
+  .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.85rem; }
+  .row:last-child { margin-bottom: 0; }
+  .muted { color: var(--text-dim); font-size: 0.75rem; }
 
-  #overlay {
-    position: fixed; inset: 0;
-    background: rgba(10,12,18,0.92);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    z-index: 20;
-    text-align: center;
-    padding: 20px;
+  button {
+    border: none; border-radius: 8px; padding: 10px 14px;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #06110d;
   }
-  #overlay.show { display: flex; }
-  #overlay h2 { font-size: 1.6rem; margin-bottom: 6px; }
-  #overlay p { color: #aab2c5; margin-bottom: 20px; }
-  #overlay button { background: var(--blue); color: white; padding: 12px 24px; }
+  button.secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+  button.danger { background: var(--danger); color: #2a0505; }
+  button:disabled { opacity: 0.35; cursor: default; }
+
+  .unitBuy {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--panel2); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+  }
+  .unitBuy .info .n { font-weight: 700; font-size: 0.85rem; }
+  .unitBuy .info .s { font-size: 0.7rem; color: var(--text-dim); }
+  .unitBuy .have { font-size: 0.7rem; color: var(--accent); margin-top: 2px; }
+
+  .targetCard {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--panel2); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+  }
+  .targetCard .n { font-weight: 700; font-size: 0.85rem; }
+  .targetCard .p { font-size: 0.7rem; color: var(--text-dim); }
+
+  .logItem { border-bottom: 1px solid var(--border); padding: 8px 0; font-size: 0.78rem; }
+  .logItem:last-child { border-bottom: none; }
+  .logItem .win { color: var(--accent); font-weight: 700; }
+  .logItem .loss { color: var(--danger); font-weight: 700; }
+  .logItem .meta { color: var(--text-dim); font-size: 0.68rem; margin-top: 2px; }
+
+  #chatBox { height: 200px; overflow-y: auto; background: var(--panel2); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; }
+  .chatMsg { font-size: 0.78rem; margin-bottom: 6px; }
+  .chatMsg .u { color: var(--accent); font-weight: 700; }
+  .chatRow { display: flex; gap: 6px; }
+  .chatRow input {
+    flex: 1; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--panel2); color: var(--text); padding: 10px; font-size: 0.85rem;
+  }
+
+  input[type=text] {
+    width: 100%; padding: 10px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--panel2); color: var(--text);
+    font-size: 0.9rem; margin-bottom: 8px;
+  }
+
+  #toast {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: #1b2233; border: 1px solid var(--accent); color: var(--text);
+    padding: 10px 18px; border-radius: 10px; font-size: 0.8rem;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    max-width: 90%; text-align: center; z-index: 50;
+  }
+  #toast.show { opacity: 1; }
+
+  #loadingScreen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; z-index: 100; color: var(--text-dim); font-size: 0.85rem;
+  }
+
+  #nameModal {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: none; align-items: center; justify-content: center; z-index: 60; padding: 20px;
+  }
+  #nameModal.show { display: flex; }
+  #nameModal .box {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px; width: 100%; max-width: 380px;
+  }
+  #nameModal h2 { margin: 0 0 4px; font-size: 1.1rem; }
+  #nameModal p { color: var(--text-dim); font-size: 0.8rem; margin-bottom: 14px; }
 </style>
 </head>
 <body>
-<div id="app">
-  <h1>Territory <span>Wars</span></h1>
 
-  <div id="hud">
-    <div class="hud-side p1">
-      <div>🔵 You</div>
-      <div class="hud-gold" id="p1Gold">Gold: 0</div>
-      <div id="p1Tiles">Tiles: 0</div>
-    </div>
-    <div class="hud-side p2">
-      <div>🔴 Enemy</div>
-      <div class="hud-gold" id="p2Gold">Gold: 0</div>
-      <div id="p2Tiles">Tiles: 0</div>
-    </div>
-  </div>
-
-  <div id="turnInfo">Your turn — Turn 1</div>
-
-  <div id="boardWrap">
-    <canvas id="board" width="320" height="400"></canvas>
-  </div>
-
-  <div id="log">Welcome to Territory Wars. Capture the enemy base or wipe out their army to win.</div>
-
-  <div id="controls">
-    <button id="endTurnBtn">End Turn</button>
-    <button id="resetBtn">↺</button>
-  </div>
-</div>
-
-<div id="modalOverlay">
-  <div id="modal">
-    <h3>Recruit at Base</h3>
-    <div id="unitOptions"></div>
-    <button id="modalCancel">Cancel</button>
-  </div>
-</div>
-
-<div id="overlay">
-  <h2 id="overlayTitle">Victory!</h2>
-  <p id="overlaySub">You conquered the enemy.</p>
-  <button id="overlayRestart">Play Again</button>
-</div>
+<div id="loadingScreen">Establishing uplink to colony network…</div>
 
 <script>
-(function() {
-  "use strict";
-
-  // ---------- Config ----------
-  const COLS = 8, ROWS = 10, CELL = 40;
-  const MAX_TURNS = 40;
-  const UNIT_TYPES = {
-    infantry: { name: "Infantry", cost: 30, hp: 10, atk: 4, icon: "I" },
-    tank:     { name: "Tank",     cost: 70, hp: 20, atk: 8, icon: "T" }
-  };
-  const P1 = 1, P2 = 2, NEUTRAL = 0;
-
-  const canvas = document.getElementById('board');
-  const ctx = canvas.getContext('2d');
-
-  // ---------- State ----------
-  let tiles, bases, gold, units_acted_dummy, turn, current, selected, gameOver, log;
-
-  function newGame() {
-    tiles = [];
-    for (let r = 0; r < ROWS; r++) {
-      const row = [];
-      for (let c = 0; c < COLS; c++) {
-        row.push({ owner: NEUTRAL, unit: null, isBase: false });
-      }
-      tiles.push(row);
-    }
-    bases = { 1: { r: 0, c: 1 }, 2: { r: ROWS - 1, c: COLS - 2 } };
-    tiles[bases[1].r][bases[1].c].owner = P1;
-    tiles[bases[1].r][bases[1].c].isBase = true;
-    tiles[bases[2].r][bases[2].c].owner = P2;
-    tiles[bases[2].r][bases[2].c].isBase = true;
-
-    placeUnit(bases[1].r, bases[1].c, P1, 'infantry');
-    placeUnit(bases[2].r, bases[2].c, P2, 'infantry');
-    // starter extra unit near each base
-    placeUnit(bases[1].r + 1, bases[1].c, P1, 'infantry');
-    tiles[bases[1].r + 1][bases[1].c].owner = P1;
-    placeUnit(bases[2].r - 1, bases[2].c, P2, 'infantry');
-    tiles[bases[2].r - 1][bases[2].c].owner = P2;
-
-    gold = { 1: 40, 2: 40 };
-    turn = 1;
-    current = P1;
-    selected = null;
-    gameOver = false;
-    log = [];
-    addLog("Welcome to Territory Wars. Capture the enemy base or wipe out their army to win.");
-    updateHud();
-    draw();
-  }
-
-  function placeUnit(r, c, owner, type) {
-    const t = UNIT_TYPES[type];
-    tiles[r][c].unit = { type, owner, hp: t.hp, maxHp: t.hp, atk: t.atk, acted: false };
-  }
-
-  function addLog(msg) {
-    log.unshift(msg);
-    log = log.slice(0, 12);
-    document.getElementById('log').innerHTML = log.map(m => `<div>${m}</div>`).join('');
-  }
-
-  function inBounds(r, c) { return r >= 0 && r < ROWS && c >= 0 && c < COLS; }
-  function neighbors(r, c) {
-    return [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].filter(([rr,cc]) => inBounds(rr,cc));
-  }
-
-  // ---------- Drawing ----------
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        const t = tiles[r][c];
-        const x = c * CELL, y = r * CELL;
-        let fill = "#3a3f4f";
-        if (t.owner === P1) fill = "#2a4d85";
-        else if (t.owner === P2) fill = "#853327";
-        ctx.fillStyle = fill;
-        ctx.fillRect(x, y, CELL - 2, CELL - 2);
-
-        if (t.isBase) {
-          ctx.fillStyle = "#f2c14e";
-          ctx.font = "16px sans-serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText("★", x + CELL/2 - 1, y + CELL/2 - 1);
-        }
-
-        if (t.unit) {
-          const u = t.unit;
-          ctx.beginPath();
-          ctx.arc(x + CELL/2 - 1, y + CELL/2 - 1, 14, 0, Math.PI*2);
-          ctx.fillStyle = u.owner === P1 ? "#5b9bf0" : "#f0705b";
-          ctx.fill();
-          if (u.acted) {
-            ctx.strokeStyle = "rgba(0,0,0,0.5)";
-            ctx.lineWidth = 3;
-            ctx.stroke();
-          }
-          ctx.fillStyle = "#0c0f16";
-          ctx.font = "bold 12px sans-serif";
-          ctx.fillText(UNIT_TYPES[u.type].icon, x + CELL/2 - 1, y + CELL/2 - 1);
-
-          // hp bar
-          const hpW = 26;
-          ctx.fillStyle = "#0c0f16";
-          ctx.fillRect(x + CELL/2 - hpW/2 - 1, y + CELL - 8, hpW, 4);
-          ctx.fillStyle = "#5be05b";
-          ctx.fillRect(x + CELL/2 - hpW/2 - 1, y + CELL - 8, hpW * (u.hp/u.maxHp), 4);
-        }
-
-        // selection highlight
-        if (selected && selected.r === r && selected.c === c) {
-          ctx.strokeStyle = "#f2c14e";
-          ctx.lineWidth = 3;
-          ctx.strokeRect(x + 1, y + 1, CELL - 4, CELL - 4);
-        } else if (selected && isValidMove(selected.r, selected.c, r, c)) {
-          ctx.strokeStyle = "rgba(242,193,78,0.6)";
-          ctx.lineWidth = 2;
-          ctx.strokeRect(x + 2, y + 2, CELL - 6, CELL - 6);
-        }
-      }
+  function showFatalError(msg) {
+    var ls = document.getElementById('loadingScreen');
+    if (ls) {
+      ls.textContent = "Error: " + msg;
+      ls.style.padding = "0 24px";
+      ls.style.textAlign = "center";
     }
   }
+  window.addEventListener('error', function(e) {
+    showFatalError(e.message || (e.error && e.error.message) || "unknown script error");
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    var reason = e.reason;
+    showFatalError(reason && reason.message ? reason.message : String(reason));
+  });
+</script>
 
-  function updateHud() {
-    let t1 = 0, t2 = 0;
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-      if (tiles[r][c].owner === P1) t1++;
-      if (tiles[r][c].owner === P2) t2++;
-    }
-    document.getElementById('p1Gold').textContent = "Gold: " + gold[1];
-    document.getElementById('p2Gold').textContent = "Gold: " + gold[2];
-    document.getElementById('p1Tiles').textContent = "Tiles: " + t1;
-    document.getElementById('p2Tiles').textContent = "Tiles: " + t2;
-    document.getElementById('turnInfo').textContent =
-      (current === P1 ? "Your turn" : "Enemy turn") + " — Turn " + turn;
-  }
+<div id="app" style="display:none;">
+  <h1>Legions <span>Survival</span></h1>
+  <div class="subtitle">Rebuild. Raid. Rise among the stars.</div>
 
-  // ---------- Game logic ----------
-  function isValidMove(fr, fc, tr, tc) {
-    if (fr === tr && fc === tc) return false;
-    const dist = Math.abs(fr-tr) + Math.abs(fc-tc);
-    if (dist !== 1) return false;
-    const u = tiles[fr][fc].unit;
-    if (!u || u.acted || u.owner !== current) return false;
-    return true;
-  }
+  <div id="hud">
+    <div>
+      <div class="name" id="hudName">Colony</div>
+      <div class="res">
+        <span>Ore: <b id="hudOre">0</b></span>
+        <span>Energy: <b id="hudEnergy">0</b></span>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div class="muted">Power</div>
+      <div style="font-weight:700; color: var(--warn);" id="hudPower">0</div>
+    </div>
+  </div>
 
-  function tryMove(fr, fc, tr, tc) {
-    const from = tiles[fr][fc];
-    const to = tiles[tr][tc];
-    const attacker = from.unit;
+  <div id="tabs">
+    <div class="tabBtn active" data-tab="colony">Colony</div>
+    <div class="tabBtn" data-tab="raid">Raid</div>
+    <div class="tabBtn" data-tab="coalition">Coalition</div>
+    <div class="tabBtn" data-tab="log">Log</div>
+  </div>
 
-    if (!to.unit) {
-      // move & capture
-      to.unit = attacker;
-      to.unit.acted = true;
-      to.owner = attacker.owner;
-      from.unit = null;
-      addLog((attacker.owner === P1 ? "You" : "Enemy") + " advanced and claimed a tile.");
-    } else if (to.unit.owner !== attacker.owner) {
-      // combat
-      const defender = to.unit;
-      const atkRoll = attacker.atk * (0.8 + Math.random() * 0.4);
-      const defRoll = defender.atk * (0.8 + Math.random() * 0.4);
-      if (atkRoll > defRoll) {
-        const dmg = Math.round(defRoll / 2);
-        attacker.hp -= dmg;
-        addLog((attacker.owner === P1 ? "You" : "Enemy") + "'s " + UNIT_TYPES[attacker.type].name +
-          " defeated a " + UNIT_TYPES[defender.type].name + "!");
-        if (attacker.hp <= 0) {
-          from.unit = null;
-          addLog("But it was destroyed in the process.");
-        } else {
-          attacker.acted = true;
-          to.unit = attacker;
-          to.owner = attacker.owner;
-          from.unit = null;
-        }
-      } else {
-        const dmg = Math.round(atkRoll / 2);
-        defender.hp -= dmg;
-        attacker.acted = true;
-        from.unit = attacker; // stays, acted
-        addLog((attacker.owner === P1 ? "Your" : "Enemy's") + " attack was repelled" +
-          (defender.hp <= 0 ? " but the defender fell too!" : "."));
-        if (defender.hp <= 0) to.unit = null;
-      }
-    }
-    selected = null;
-    checkWin();
-    draw();
-    updateHud();
-  }
+  <div id="content">
 
-  function checkWin() {
-    // base captured?
-    const b1owner = tiles[bases[1].r][bases[1].c].owner;
-    const b2owner = tiles[bases[2].r][bases[2].c].owner;
-    if (b1owner === P2) return endGame(P2, "The enemy captured your base.");
-    if (b2owner === P1) return endGame(P1, "You captured the enemy base!");
+    <div id="tab-colony" class="tabPane">
+      <div class="card">
+        <h3>Colony Status</h3>
+        <div class="row"><span>Ore reserves</span><b id="colOre">0</b></div>
+        <div class="row"><span>Energy reserves</span><b id="colEnergy">0</b></div>
+        <div class="row"><span>Combat power</span><b id="colPower">0</b></div>
+        <div class="muted" style="margin-top:6px;">Resources generate automatically over time, even while offline (capped at 8 hours).</div>
+      </div>
 
-    // unit wipeout (only counts after first couple turns to avoid instant end)
-    const counts = countUnits();
-    if (turn > 2 && counts[1] === 0) return endGame(P2, "Your army was wiped out.");
-    if (turn > 2 && counts[2] === 0) return endGame(P1, "You wiped out the enemy army!");
-  }
+      <div class="card">
+        <h3>Recruit Forces</h3>
+        <div class="unitBuy">
+          <div class="info">
+            <div class="n">🛰️ Scout Drone</div>
+            <div class="s">25 Ore · Power 3</div>
+            <div class="have">Owned: <span id="ownedDrone">0</span></div>
+          </div>
+          <button id="buyDrone">Build</button>
+        </div>
+        <div class="unitBuy">
+          <div class="info">
+            <div class="n">🤖 Battle Mech</div>
+            <div class="s">60 Ore + 15 Energy · Power 9</div>
+            <div class="have">Owned: <span id="ownedMech">0</span></div>
+          </div>
+          <button id="buyMech">Build</button>
+        </div>
+      </div>
+    </div>
 
-  function countUnits() {
-    const c = { 1: 0, 2: 0 };
-    for (let r = 0; r < ROWS; r++) for (let cc = 0; cc < COLS; cc++) {
-      const u = tiles[r][cc].unit;
-      if (u) c[u.owner]++;
-    }
-    return c;
-  }
+    <div id="tab-raid" class="tabPane" style="display:none;">
+      <div class="card">
+        <h3>Nearby Colonies</h3>
+        <div class="muted" style="margin-bottom:10px;">Raiding steals ore and can weaken enemy forces. Losing a raid costs you units too — scout before you strike.</div>
+        <div id="targetList"><div class="muted">Scanning sector…</div></div>
+        <button class="secondary" id="refreshTargets" style="margin-top:8px; width:100%;">Refresh Scan</button>
+      </div>
+    </div>
 
-  function endGame(winner, reason) {
-    gameOver = true;
-    document.getElementById('overlayTitle').textContent = winner === P1 ? "Victory!" : "Defeat";
-    document.getElementById('overlaySub').textContent = reason;
-    document.getElementById('overlay').classList.add('show');
-  }
+    <div id="tab-coalition" class="tabPane" style="display:none;">
+      <div id="coalitionContent"><div class="muted">Loading…</div></div>
+    </div>
 
-  function endTurnByLimit() {
-    let t1 = 0, t2 = 0;
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-      if (tiles[r][c].owner === P1) t1++;
-      if (tiles[r][c].owner === P2) t2++;
-    }
-    if (t1 === t2) endGame(P1, "Turn limit reached — it's a draw (tiebreak favors you).");
-    else endGame(t1 > t2 ? P1 : P2, "Turn limit reached. Final tiles — You: " + t1 + " Enemy: " + t2);
-  }
+    <div id="tab-log" class="tabPane" style="display:none;">
+      <div class="card">
+        <h3>Battle Log</h3>
+        <div id="logList"><div class="muted">No engagements yet.</div></div>
+      </div>
+    </div>
 
-  function startTurn(player) {
-    current = player;
-    let tileCount = 0;
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-      const t = tiles[r][c];
-      if (t.owner === player) tileCount++;
-      if (t.unit && t.unit.owner === player) t.unit.acted = false;
-    }
-    gold[player] += 5 + tileCount * 2;
-    updateHud();
-    draw();
-    if (player === P2) {
-      setTimeout(runAiTurn, 500);
-    }
-  }
+  </div>
+</div>
 
-  function endTurn() {
-    if (gameOver) return;
-    selected = null;
-    if (current === P1) {
-      startTurn(P2);
-    } else {
-      turn++;
-      if (turn > MAX_TURNS) { endTurnByLimit(); return; }
-      startTurn(P1);
-    }
-  }
+<div id="nameModal">
+  <div class="box">
+    <h2>Name Your Colony</h2>
+    <p>This is how other commanders will see you.</p>
+    <input type="text" id="nameInput" placeholder="e.g. Vega Outpost" maxlength="20">
+    <button id="nameSubmit" style="width:100%;">Deploy</button>
+  </div>
+</div>
 
-  // ---------- Recruiting ----------
-  function openRecruitModal() {
-    const base = bases[current];
-    if (tiles[base.r][base.c].unit) {
-      addLog("Base is occupied — move that unit before recruiting.");
-      return;
-    }
-    const wrap = document.getElementById('unitOptions');
-    wrap.innerHTML = '';
-    Object.entries(UNIT_TYPES).forEach(([key, u]) => {
-      const affordable = gold[current] >= u.cost;
-      const div = document.createElement('div');
-      div.className = 'unitOption' + (affordable ? '' : ' disabled');
-      div.innerHTML = `<div><div class="name">${u.name}</div><div class="stats">HP ${u.hp} · ATK ${u.atk} · Cost ${u.cost}g</div></div>`;
-      const btn = document.createElement('button');
-      btn.textContent = 'Recruit';
-      btn.disabled = !affordable;
-      btn.onclick = () => {
-        gold[current] -= u.cost;
-        placeUnit(base.r, base.c, current, key);
-        tiles[base.r][base.c].unit.acted = true;
-        addLog((current === P1 ? "You" : "Enemy") + " recruited a " + u.name + ".");
-        closeModal();
-        updateHud();
-        draw();
-      };
-      div.appendChild(btn);
-      wrap.appendChild(div);
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getAuth, signInAnonymously, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc, updateDoc, increment,
+  collection, query, where, orderBy, limit, getDocs, addDoc,
+  onSnapshot, runTransaction, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCNWvJCdYSwlXeVvZZ-d2APsHZ6OMkOmYk",
+  authDomain: "legions-survival.firebaseapp.com",
+  projectId: "legions-survival",
+  storageBucket: "legions-survival.firebasestorage.app",
+  messagingSenderId: "652717163029",
+  appId: "1:652717163029:web:c4394818b20631f8dbc41c",
+  measurementId: "G-NR3J128XVP"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ---------- Config ----------
+const RATES = { ore: 3, energy: 2 }; // per minute
+const OFFLINE_CAP_MIN = 480; // 8 hours
+const UNITS = {
+  drone: { name: "Scout Drone", cost: { ore: 25, energy: 0 }, power: 3 },
+  mech:  { name: "Battle Mech", cost: { ore: 60, energy: 15 }, power: 9 }
+};
+
+let uid = null;
+let playerData = null;
+let unsubChat = null;
+
+function power(units) {
+  return (units.drone || 0) * UNITS.drone.power + (units.mech || 0) * UNITS.mech.power;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ---------- Auth & bootstrap ----------
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    signInAnonymously(auth).catch(err => {
+      const ls = document.getElementById('loadingScreen');
+      ls.textContent = "Uplink failed: " + err.message +
+        " — check that this domain is added under Firebase Authentication → Settings → Authorized domains, and that Anonymous sign-in is enabled.";
+      ls.style.padding = "0 24px";
+      ls.style.textAlign = "center";
     });
-    document.getElementById('modalOverlay').classList.add('show');
+    return;
   }
-  function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+  uid = user.uid;
+  try {
+    await bootstrapPlayer();
+  } catch (err) {
+    const ls = document.getElementById('loadingScreen');
+    ls.textContent = "Startup error: " + err.message;
+    ls.style.padding = "0 24px";
+    ls.style.textAlign = "center";
+  }
+});
 
-  // ---------- Input ----------
-  canvas.addEventListener('click', (e) => {
-    if (gameOver || current !== P1) return;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-    const c = Math.floor(x / CELL);
-    const r = Math.floor(y / CELL);
-    if (!inBounds(r, c)) return;
-    const t = tiles[r][c];
+async function bootstrapPlayer() {
+  const ref = doc(db, "players", uid);
+  const snap = await getDoc(ref);
 
-    if (selected) {
-      if (selected.r === r && selected.c === c) {
-        selected = null; draw(); return;
-      }
-      if (isValidMove(selected.r, selected.c, r, c)) {
-        tryMove(selected.r, selected.c, r, c);
-        return;
-      }
-      // reselect if clicking own unit
-      if (t.unit && t.unit.owner === P1 && !t.unit.acted) {
-        selected = { r, c };
-        draw();
-        return;
-      }
-      if (t.isBase && t.owner === P1) { openRecruitModal(); selected = null; draw(); return; }
-      selected = null; draw();
+  if (!snap.exists()) {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('nameModal').classList.add('show');
+    return;
+  }
+
+  playerData = snap.data();
+  await applyOfflineGains(ref, playerData);
+  showApp();
+}
+
+document.getElementById('nameSubmit').addEventListener('click', async () => {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) { toast("Enter a colony name"); return; }
+  const ref = doc(db, "players", uid);
+  const data = {
+    displayName: name,
+    ore: 100,
+    energy: 50,
+    units: { drone: 2, mech: 0 },
+    coalitionId: null,
+    lastUpdate: Date.now(),
+    createdAt: Date.now()
+  };
+  await setDoc(ref, data);
+  playerData = data;
+  document.getElementById('nameModal').classList.remove('show');
+  showApp();
+});
+
+async function applyOfflineGains(ref, data) {
+  const now = Date.now();
+  const elapsedMs = Math.max(0, now - (data.lastUpdate || now));
+  const minutes = Math.min(elapsedMs / 60000, OFFLINE_CAP_MIN);
+  if (minutes >= 1) {
+    const oreGain = Math.floor(minutes * RATES.ore);
+    const energyGain = Math.floor(minutes * RATES.energy);
+    data.ore += oreGain;
+    data.energy += energyGain;
+    data.lastUpdate = now;
+    await updateDoc(ref, { ore: data.ore, energy: data.energy, lastUpdate: now });
+    if (oreGain > 0) toast(`Colony produced ${oreGain} ore, ${energyGain} energy while away.`);
+  }
+}
+
+function showApp() {
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  refreshHud();
+  startResourceTicker();
+  wireTabs();
+  wireColony();
+  wireRaid();
+  wireCoalition();
+  wireLog();
+  renderColonyTab();
+  loadTargets();
+  loadCoalitionTab();
+  loadLog();
+}
+
+function refreshHud() {
+  document.getElementById('hudName').textContent = playerData.displayName;
+  document.getElementById('hudOre').textContent = Math.floor(playerData.ore);
+  document.getElementById('hudEnergy').textContent = Math.floor(playerData.energy);
+  document.getElementById('hudPower').textContent = power(playerData.units);
+}
+
+// live local ticking so numbers visibly climb; synced to Firestore periodically
+let tickAccumMs = 0;
+function startResourceTicker() {
+  setInterval(() => {
+    tickAccumMs += 1000;
+    playerData.ore += RATES.ore / 60;
+    playerData.energy += RATES.energy / 60;
+    refreshHud();
+    renderColonyTab();
+    if (tickAccumMs >= 30000) { // sync every 30s
+      tickAccumMs = 0;
+      const ref = doc(db, "players", uid);
+      updateDoc(ref, {
+        ore: Math.floor(playerData.ore),
+        energy: Math.floor(playerData.energy),
+        lastUpdate: Date.now()
+      }).catch(() => {});
+    }
+  }, 1000);
+}
+
+// ---------- Tabs ----------
+function wireTabs() {
+  document.querySelectorAll('.tabBtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.tabPane').forEach(p => p.style.display = 'none');
+      document.getElementById('tab-' + btn.dataset.tab).style.display = 'block';
+      if (btn.dataset.tab === 'raid') loadTargets();
+      if (btn.dataset.tab === 'log') loadLog();
+    });
+  });
+}
+
+// ---------- Colony tab ----------
+function renderColonyTab() {
+  document.getElementById('colOre').textContent = Math.floor(playerData.ore);
+  document.getElementById('colEnergy').textContent = Math.floor(playerData.energy);
+  document.getElementById('colPower').textContent = power(playerData.units);
+  document.getElementById('ownedDrone').textContent = playerData.units.drone || 0;
+  document.getElementById('ownedMech').textContent = playerData.units.mech || 0;
+}
+
+function wireColony() {
+  document.getElementById('buyDrone').addEventListener('click', () => recruit('drone'));
+  document.getElementById('buyMech').addEventListener('click', () => recruit('mech'));
+}
+
+async function recruit(type) {
+  const cost = UNITS[type].cost;
+  if (playerData.ore < cost.ore || playerData.energy < cost.energy) {
+    toast("Not enough resources.");
+    return;
+  }
+  playerData.ore -= cost.ore;
+  playerData.energy -= cost.energy;
+  playerData.units[type] = (playerData.units[type] || 0) + 1;
+  refreshHud();
+  renderColonyTab();
+  const ref = doc(db, "players", uid);
+  await updateDoc(ref, {
+    ore: Math.floor(playerData.ore),
+    energy: Math.floor(playerData.energy),
+    [`units.${type}`]: increment(1),
+    lastUpdate: Date.now()
+  });
+  toast(`${UNITS[type].name} deployed.`);
+}
+
+// ---------- Raid tab ----------
+function wireRaid() {
+  document.getElementById('refreshTargets').addEventListener('click', loadTargets);
+}
+
+async function loadTargets() {
+  const list = document.getElementById('targetList');
+  list.innerHTML = '<div class="muted">Scanning sector…</div>';
+  try {
+    const q = query(collection(db, "players"), limit(25));
+    const snap = await getDocs(q);
+    const targets = [];
+    snap.forEach(d => {
+      if (d.id !== uid) targets.push({ id: d.id, ...d.data() });
+    });
+    if (targets.length === 0) {
+      list.innerHTML = '<div class="muted">No other colonies detected yet. Check back once more commanders join.</div>';
       return;
     }
+    targets.sort(() => Math.random() - 0.5);
+    list.innerHTML = '';
+    targets.slice(0, 10).forEach(t => {
+      const p = power(t.units || {});
+      const div = document.createElement('div');
+      div.className = 'targetCard';
+      div.innerHTML = `<div><div class="n">${escapeHtml(t.displayName || 'Unknown')}</div>
+        <div class="p">Power: ${p} · Ore: ${Math.floor(t.ore || 0)}</div></div>`;
+      const btn = document.createElement('button');
+      btn.textContent = 'Raid';
+      btn.className = 'danger';
+      btn.onclick = () => runRaid(t.id, t.displayName);
+      div.appendChild(btn);
+      list.appendChild(div);
+    });
+  } catch (e) {
+    list.innerHTML = '<div class="muted">Scan failed: ' + escapeHtml(e.message) + '</div>';
+  }
+}
 
-    if (t.unit && t.unit.owner === P1 && !t.unit.acted) {
-      selected = { r, c };
-      draw();
-    } else if (t.isBase && t.owner === P1) {
-      openRecruitModal();
-    }
-  });
+async function runRaid(targetId, targetName) {
+  const myRef = doc(db, "players", uid);
+  const targetRef = doc(db, "players", targetId);
 
-  document.getElementById('endTurnBtn').addEventListener('click', endTurn);
-  document.getElementById('resetBtn').addEventListener('click', () => {
-    document.getElementById('overlay').classList.remove('show');
-    newGame();
-  });
-  document.getElementById('modalCancel').addEventListener('click', closeModal);
-  document.getElementById('overlayRestart').addEventListener('click', () => {
-    document.getElementById('overlay').classList.remove('show');
-    newGame();
-  });
+  let outcome;
+  try {
+    outcome = await runTransaction(db, async (tx) => {
+      const meSnap = await tx.get(myRef);
+      const themSnap = await tx.get(targetRef);
+      if (!meSnap.exists() || !themSnap.exists()) throw new Error("Colony not found.");
+      const me = meSnap.data();
+      const them = themSnap.data();
 
-  // ---------- Simple AI ----------
-  function runAiTurn() {
-    if (gameOver) { return; }
+      const myPower = power(me.units) * (0.85 + Math.random() * 0.3);
+      const theirPower = power(them.units) * (0.85 + Math.random() * 0.3);
 
-    // maybe recruit
-    const base = bases[P2];
-    if (!tiles[base.r][base.c].unit) {
-      if (gold[P2] >= UNIT_TYPES.tank.cost && Math.random() < 0.6) {
-        gold[P2] -= UNIT_TYPES.tank.cost;
-        placeUnit(base.r, base.c, P2, 'tank');
-        tiles[base.r][base.c].unit.acted = true;
-        addLog("Enemy recruited a Tank.");
-      } else if (gold[P2] >= UNIT_TYPES.infantry.cost) {
-        gold[P2] -= UNIT_TYPES.infantry.cost;
-        placeUnit(base.r, base.c, P2, 'infantry');
-        tiles[base.r][base.c].unit.acted = true;
-        addLog("Enemy recruited Infantry.");
-      }
-    }
-    updateHud();
-    draw();
+      let result;
+      if (myPower > theirPower) {
+        const oreStolen = Math.floor((them.ore || 0) * 0.2);
+        const theirDroneLoss = Math.floor((them.units.drone || 0) * 0.2);
+        const theirMechLoss = Math.floor((them.units.mech || 0) * 0.15);
+        const myDroneLoss = Math.floor((me.units.drone || 0) * 0.05);
+        const myMechLoss = Math.floor((me.units.mech || 0) * 0.05);
 
-    // gather AI units
-    const aiUnits = [];
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-      const u = tiles[r][c].unit;
-      if (u && u.owner === P2 && !u.acted) aiUnits.push({ r, c });
-    }
-
-    let i = 0;
-    function step() {
-      if (gameOver) return;
-      if (i >= aiUnits.length) {
-        setTimeout(endTurn, 300);
-        return;
-      }
-      const { r, c } = aiUnits[i];
-      i++;
-      const unit = tiles[r][c].unit;
-      if (!unit || unit.acted) { step(); return; }
-
-      const opts = neighbors(r, c);
-      // priority 1: attack adjacent enemy unit
-      let target = opts.find(([rr, cc]) => tiles[rr][cc].unit && tiles[rr][cc].unit.owner === P1);
-      // priority 2: capture unowned/enemy empty tile
-      if (!target) target = opts.find(([rr, cc]) => !tiles[rr][cc].unit && tiles[rr][cc].owner !== P2);
-      // priority 3: move toward player base
-      if (!target) {
-        opts.sort((a, b) => {
-          const da = Math.abs(a[0]-bases[1].r) + Math.abs(a[1]-bases[1].c);
-          const db = Math.abs(b[0]-bases[1].r) + Math.abs(b[1]-bases[1].c);
-          return da - db;
+        tx.update(targetRef, {
+          ore: Math.max(0, (them.ore || 0) - oreStolen),
+          "units.drone": Math.max(0, (them.units.drone || 0) - theirDroneLoss),
+          "units.mech": Math.max(0, (them.units.mech || 0) - theirMechLoss)
         });
-        target = opts.find(([rr, cc]) => !tiles[rr][cc].unit || tiles[rr][cc].unit.owner !== P2);
+        tx.update(myRef, {
+          ore: (me.ore || 0) + oreStolen,
+          "units.drone": Math.max(0, (me.units.drone || 0) - myDroneLoss),
+          "units.mech": Math.max(0, (me.units.mech || 0) - myMechLoss)
+        });
+
+        result = { win: true, oreStolen, theirDroneLoss, theirMechLoss, myDroneLoss, myMechLoss };
+      } else {
+        const myDroneLoss = Math.floor((me.units.drone || 0) * 0.2);
+        const myMechLoss = Math.floor((me.units.mech || 0) * 0.15);
+
+        tx.update(myRef, {
+          "units.drone": Math.max(0, (me.units.drone || 0) - myDroneLoss),
+          "units.mech": Math.max(0, (me.units.mech || 0) - myMechLoss)
+        });
+
+        result = { win: false, myDroneLoss, myMechLoss };
       }
-      if (target) {
-        tryMove(r, c, target[0], target[1]);
-      }
-      setTimeout(step, 350);
-    }
-    setTimeout(step, 300);
+      return result;
+    });
+  } catch (e) {
+    toast("Raid failed: " + e.message);
+    return;
   }
 
-  newGame();
-})();
+  // refresh local state
+  const freshMe = await getDoc(myRef);
+  playerData = freshMe.data();
+  refreshHud();
+  renderColonyTab();
+
+  const ts = Date.now();
+  await addDoc(collection(db, "players", uid, "logs"), {
+    ts, type: "raid", opponentName: targetName,
+    outcome: outcome.win ? "win" : "loss",
+    oreStolen: outcome.oreStolen || 0,
+    unitsLost: (outcome.myDroneLoss || 0) + (outcome.myMechLoss || 0)
+  });
+  await addDoc(collection(db, "players", targetId, "logs"), {
+    ts, type: "defense", opponentName: playerData.displayName,
+    outcome: outcome.win ? "loss" : "win",
+    oreStolen: outcome.oreStolen || 0,
+    unitsLost: (outcome.theirDroneLoss || 0) + (outcome.theirMechLoss || 0)
+  });
+
+  toast(outcome.win
+    ? `Victory! Stole ${outcome.oreStolen} ore from ${targetName}.`
+    : `Raid repelled by ${targetName}. Forces weakened.`);
+  loadTargets();
+  loadLog();
+}
+
+// ---------- Coalition tab ----------
+function wireCoalition() {}
+
+async function loadCoalitionTab() {
+  const wrap = document.getElementById('coalitionContent');
+  if (!playerData.coalitionId) {
+    wrap.innerHTML = `
+      <div class="card">
+        <h3>Found a Coalition</h3>
+        <input type="text" id="coalitionNameInput" placeholder="Coalition name" maxlength="24">
+        <button id="createCoalitionBtn" style="width:100%;">Found Coalition</button>
+      </div>
+      <div class="card">
+        <h3>Join a Coalition</h3>
+        <div id="coalitionList"><div class="muted">Loading…</div></div>
+      </div>
+    `;
+    document.getElementById('createCoalitionBtn').addEventListener('click', createCoalition);
+    loadCoalitionList();
+    return;
+  }
+
+  const cRef = doc(db, "coalitions", playerData.coalitionId);
+  const cSnap = await getDoc(cRef);
+  if (!cSnap.exists()) {
+    // stale reference — clear it
+    await updateDoc(doc(db, "players", uid), { coalitionId: null });
+    playerData.coalitionId = null;
+    loadCoalitionTab();
+    return;
+  }
+  const coalition = cSnap.data();
+
+  wrap.innerHTML = `
+    <div class="card">
+      <h3>${escapeHtml(coalition.name)}</h3>
+      <div class="muted" style="margin-bottom:8px;">Members: <span id="memberCount">…</span></div>
+      <button class="secondary" id="leaveCoalitionBtn">Leave Coalition</button>
+    </div>
+    <div class="card">
+      <h3>Coalition Comms</h3>
+      <div id="chatBox"></div>
+      <div class="chatRow">
+        <input type="text" id="chatInput" placeholder="Message your coalition…" maxlength="200">
+        <button id="chatSend">Send</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('leaveCoalitionBtn').addEventListener('click', leaveCoalition);
+  document.getElementById('chatSend').addEventListener('click', sendChat);
+  document.getElementById('chatInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendChat();
+  });
+
+  const memberQ = query(collection(db, "players"), where("coalitionId", "==", playerData.coalitionId));
+  const memberSnap = await getDocs(memberQ);
+  document.getElementById('memberCount').textContent = memberSnap.size;
+
+  if (unsubChat) unsubChat();
+  const msgQ = query(
+    collection(db, "coalitions", playerData.coalitionId, "messages"),
+    orderBy("ts", "desc"), limit(30)
+  );
+  unsubChat = onSnapshot(msgQ, (snap) => {
+    const box = document.getElementById('chatBox');
+    if (!box) return;
+    const msgs = [];
+    snap.forEach(d => msgs.push(d.data()));
+    msgs.reverse();
+    box.innerHTML = msgs.map(m =>
+      `<div class="chatMsg"><span class="u">${escapeHtml(m.displayName)}:</span> ${escapeHtml(m.text)}</div>`
+    ).join('') || '<div class="muted">No messages yet.</div>';
+    box.scrollTop = box.scrollHeight;
+  });
+}
+
+async function loadCoalitionList() {
+  const wrap = document.getElementById('coalitionList');
+  const snap = await getDocs(query(collection(db, "coalitions"), limit(20)));
+  if (snap.empty) {
+    wrap.innerHTML = '<div class="muted">No coalitions yet — be the first to found one.</div>';
+    return;
+  }
+  wrap.innerHTML = '';
+  snap.forEach(d => {
+    const c = d.data();
+    const div = document.createElement('div');
+    div.className = 'targetCard';
+    div.innerHTML = `<div><div class="n">${escapeHtml(c.name)}</div></div>`;
+    const btn = document.createElement('button');
+    btn.textContent = 'Join';
+    btn.onclick = () => joinCoalition(d.id);
+    div.appendChild(btn);
+    wrap.appendChild(div);
+  });
+}
+
+async function createCoalition() {
+  const nameInput = document.getElementById('coalitionNameInput');
+  const name = nameInput.value.trim();
+  if (!name) { toast("Enter a coalition name"); return; }
+  const cRef = await addDoc(collection(db, "coalitions"), {
+    name, createdBy: uid, createdAt: Date.now()
+  });
+  await updateDoc(doc(db, "players", uid), { coalitionId: cRef.id });
+  playerData.coalitionId = cRef.id;
+  toast(`${name} founded.`);
+  loadCoalitionTab();
+}
+
+async function joinCoalition(id) {
+  await updateDoc(doc(db, "players", uid), { coalitionId: id });
+  playerData.coalitionId = id;
+  toast("Joined coalition.");
+  loadCoalitionTab();
+}
+
+async function leaveCoalition() {
+  if (unsubChat) { unsubChat(); unsubChat = null; }
+  await updateDoc(doc(db, "players", uid), { coalitionId: null });
+  playerData.coalitionId = null;
+  toast("Left coalition.");
+  loadCoalitionTab();
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || !playerData.coalitionId) return;
+  input.value = '';
+  await addDoc(collection(db, "coalitions", playerData.coalitionId, "messages"), {
+    uid, displayName: playerData.displayName, text, ts: Date.now()
+  });
+}
+
+// ---------- Log tab ----------
+function wireLog() {}
+
+async function loadLog() {
+  const list = document.getElementById('logList');
+  const q = query(collection(db, "players", uid, "logs"), orderBy("ts", "desc"), limit(20));
+  const snap = await getDocs(q);
+  if (snap.empty) {
+    list.innerHTML = '<div class="muted">No engagements yet.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  snap.forEach(d => {
+    const l = d.data();
+    const div = document.createElement('div');
+    div.className = 'logItem';
+    const isWin = l.outcome === 'win';
+    const label = l.type === 'raid'
+      ? (isWin ? `You raided ${l.opponentName} — <span class="win">Victory</span>` : `You raided ${l.opponentName} — <span class="loss">Repelled</span>`)
+      : (isWin ? `${l.opponentName} raided you — <span class="win">Defended</span>` : `${l.opponentName} raided you — <span class="loss">Lost ground</span>`);
+    div.innerHTML = `<div>${label}</div>
+      <div class="meta">${l.oreStolen ? `Ore stolen: ${l.oreStolen} · ` : ''}Units lost: ${l.unitsLost || 0} · ${new Date(l.ts).toLocaleString()}</div>`;
+    list.appendChild(div);
+  });
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str == null ? '' : String(str);
+  return d.innerHTML;
+}
 </script>
 </body>
 </html>

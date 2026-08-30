@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Territory Wars</title>
+<style>
+  :root {
+    --blue: #3b7dd8;
+    --blue-dark: #1e4f99;
+    --red: #d84f3b;
+    --red-dark: #99311e;
+    --neutral: #cfd4da;
+    --bg: #10131a;
+    --panel: #1b2030;
+    --text: #eef1f7;
+    --accent: #f2c14e;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    touch-action: manipulation;
+    overscroll-behavior: none;
+    user-select: none;
+  }
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 10px 12px 16px;
+  }
+  h1 {
+    font-size: 1.3rem;
+    text-align: center;
+    margin: 4px 0 10px;
+    letter-spacing: 0.5px;
+  }
+  h1 span { color: var(--accent); }
+  #hud {
+    display: flex;
+    justify-content: space-between;
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+  }
+  .hud-side { display: flex; flex-direction: column; gap: 2px; }
+  .hud-side.p2 { text-align: right; }
+  .hud-gold { color: var(--accent); font-weight: 600; }
+  #turnInfo {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #aab2c5;
+    margin-bottom: 6px;
+    min-height: 1.1em;
+  }
+  #boardWrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+  canvas {
+    background: #0c0f16;
+    border-radius: 8px;
+    border: 2px solid #2a3040;
+    touch-action: none;
+    max-width: 100%;
+    height: auto;
+  }
+  #log {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    color: #c4cadb;
+    min-height: 2.6em;
+    max-height: 4.4em;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    line-height: 1.35em;
+  }
+  #controls {
+    display: flex;
+    gap: 8px;
+  }
+  button {
+    flex: 1;
+    padding: 12px 8px;
+    border-radius: 10px;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #endTurnBtn { background: var(--blue); color: white; }
+  #endTurnBtn:active { background: var(--blue-dark); }
+  #resetBtn { background: #3a3f4f; color: var(--text); flex: 0 0 auto; padding: 12px 14px; }
+  #resetBtn:active { background: #262b38; }
+
+  /* Modal for recruiting */
+  #modalOverlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 10;
+  }
+  #modalOverlay.show { display: flex; }
+  #modal {
+    background: var(--panel);
+    width: 100%;
+    max-width: 480px;
+    border-radius: 16px 16px 0 0;
+    padding: 16px;
+    animation: slideUp 0.15s ease-out;
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  #modal h3 { margin: 0 0 10px; font-size: 1rem; }
+  .unitOption {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #262b3c;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+  }
+  .unitOption.disabled { opacity: 0.4; }
+  .unitOption .name { font-weight: 600; }
+  .unitOption .stats { font-size: 0.75rem; color: #9aa2b8; }
+  .unitOption button { flex: 0 0 auto; background: var(--accent); color: #2b2100; padding: 8px 16px; }
+  #modalCancel { background: #3a3f4f; color: var(--text); margin-top: 4px; }
+
+  #overlay {
+    position: fixed; inset: 0;
+    background: rgba(10,12,18,0.92);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 20;
+    text-align: center;
+    padding: 20px;
+  }
+  #overlay.show { display: flex; }
+  #overlay h2 { font-size: 1.6rem; margin-bottom: 6px; }
+  #overlay p { color: #aab2c5; margin-bottom: 20px; }
+  #overlay button { background: var(--blue); color: white; padding: 12px 24px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>Territory <span>Wars</span></h1>
+
+  <div id="hud">
+    <div class="hud-side p1">
+      <div>🔵 You</div>
+      <div class="hud-gold" id="p1Gold">Gold: 0</div>
+      <div id="p1Tiles">Tiles: 0</div>
+    </div>
+    <div class="hud-side p2">
+      <div>🔴 Enemy</div>
+      <div class="hud-gold" id="p2Gold">Gold: 0</div>
+      <div id="p2Tiles">Tiles: 0</div>
+    </div>
+  </div>
+
+  <div id="turnInfo">Your turn — Turn 1</div>
+
+  <div id="boardWrap">
+    <canvas id="board" width="320" height="400"></canvas>
+  </div>
+
+  <div id="log">Welcome to Territory Wars. Capture the enemy base or wipe out their army to win.</div>
+
+  <div id="controls">
+    <button id="endTurnBtn">End Turn</button>
+    <button id="resetBtn">↺</button>
+  </div>
+</div>
+
+<div id="modalOverlay">
+  <div id="modal">
+    <h3>Recruit at Base</h3>
+    <div id="unitOptions"></div>
+    <button id="modalCancel">Cancel</button>
+  </div>
+</div>
+
+<div id="overlay">
+  <h2 id="overlayTitle">Victory!</h2>
+  <p id="overlaySub">You conquered the enemy.</p>
+  <button id="overlayRestart">Play Again</button>
+</div>
+
+<script>
+(function() {
+  "use strict";
+
+  // ---------- Config ----------
+  const COLS = 8, ROWS = 10, CELL = 40;
+  const MAX_TURNS = 40;
+  const UNIT_TYPES = {
+    infantry: { name: "Infantry", cost: 30, hp: 10, atk: 4, icon: "I" },
+    tank:     { name: "Tank",     cost: 70, hp: 20, atk: 8, icon: "T" }
+  };
+  const P1 = 1, P2 = 2, NEUTRAL = 0;
+
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+
+  // ---------- State ----------
+  let tiles, bases, gold, units_acted_dummy, turn, current, selected, gameOver, log;
+
+  function newGame() {
+    tiles = [];
+    for (let r = 0; r < ROWS; r++) {
+      const row = [];
+      for (let c = 0; c < COLS; c++) {
+        row.push({ owner: NEUTRAL, unit: null, isBase: false });
+      }
+      tiles.push(row);
+    }
+    bases = { 1: { r: 0, c: 1 }, 2: { r: ROWS - 1, c: COLS - 2 } };
+    tiles[bases[1].r][bases[1].c].owner = P1;
+    tiles[bases[1].r][bases[1].c].isBase = true;
+    tiles[bases[2].r][bases[2].c].owner = P2;
+    tiles[bases[2].r][bases[2].c].isBase = true;
+
+    placeUnit(bases[1].r, bases[1].c, P1, 'infantry');
+    placeUnit(bases[2].r, bases[2].c, P2, 'infantry');
+    // starter extra unit near each base
+    placeUnit(bases[1].r + 1, bases[1].c, P1, 'infantry');
+    tiles[bases[1].r + 1][bases[1].c].owner = P1;
+    placeUnit(bases[2].r - 1, bases[2].c, P2, 'infantry');
+    tiles[bases[2].r - 1][bases[2].c].owner = P2;
+
+    gold = { 1: 40, 2: 40 };
+    turn = 1;
+    current = P1;
+    selected = null;
+    gameOver = false;
+    log = [];
+    addLog("Welcome to Territory Wars. Capture the enemy base or wipe out their army to win.");
+    updateHud();
+    draw();
+  }
+
+  function placeUnit(r, c, owner, type) {
+    const t = UNIT_TYPES[type];
+    tiles[r][c].unit = { type, owner, hp: t.hp, maxHp: t.hp, atk: t.atk, acted: false };
+  }
+
+  function addLog(msg) {
+    log.unshift(msg);
+    log = log.slice(0, 12);
+    document.getElementById('log').innerHTML = log.map(m => `<div>${m}</div>`).join('');
+  }
+
+  function inBounds(r, c) { return r >= 0 && r < ROWS && c >= 0 && c < COLS; }
+  function neighbors(r, c) {
+    return [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].filter(([rr,cc]) => inBounds(rr,cc));
+  }
+
+  // ---------- Drawing ----------
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const t = tiles[r][c];
+        const x = c * CELL, y = r * CELL;
+        let fill = "#3a3f4f";
+        if (t.owner === P1) fill = "#2a4d85";
+        else if (t.owner === P2) fill = "#853327";
+        ctx.fillStyle = fill;
+        ctx.fillRect(x, y, CELL - 2, CELL - 2);
+
+        if (t.isBase) {
+          ctx.fillStyle = "#f2c14e";
+          ctx.font = "16px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("★", x + CELL/2 - 1, y + CELL/2 - 1);
+        }
+
+        if (t.unit) {
+          const u = t.unit;
+          ctx.beginPath();
+          ctx.arc(x + CELL/2 - 1, y + CELL/2 - 1, 14, 0, Math.PI*2);
+          ctx.fillStyle = u.owner === P1 ? "#5b9bf0" : "#f0705b";
+          ctx.fill();
+          if (u.acted) {
+            ctx.strokeStyle = "rgba(0,0,0,0.5)";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+          }
+          ctx.fillStyle = "#0c0f16";
+          ctx.font = "bold 12px sans-serif";
+          ctx.fillText(UNIT_TYPES[u.type].icon, x + CELL/2 - 1, y + CELL/2 - 1);
+
+          // hp bar
+          const hpW = 26;
+          ctx.fillStyle = "#0c0f16";
+          ctx.fillRect(x + CELL/2 - hpW/2 - 1, y + CELL - 8, hpW, 4);
+          ctx.fillStyle = "#5be05b";
+          ctx.fillRect(x + CELL/2 - hpW/2 - 1, y + CELL - 8, hpW * (u.hp/u.maxHp), 4);
+        }
+
+        // selection highlight
+        if (selected && selected.r === r && selected.c === c) {
+          ctx.strokeStyle = "#f2c14e";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x + 1, y + 1, CELL - 4, CELL - 4);
+        } else if (selected && isValidMove(selected.r, selected.c, r, c)) {
+          ctx.strokeStyle = "rgba(242,193,78,0.6)";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 2, y + 2, CELL - 6, CELL - 6);
+        }
+      }
+    }
+  }
+
+  function updateHud() {
+    let t1 = 0, t2 = 0;
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (tiles[r][c].owner === P1) t1++;
+      if (tiles[r][c].owner === P2) t2++;
+    }
+    document.getElementById('p1Gold').textContent = "Gold: " + gold[1];
+    document.getElementById('p2Gold').textContent = "Gold: " + gold[2];
+    document.getElementById('p1Tiles').textContent = "Tiles: " + t1;
+    document.getElementById('p2Tiles').textContent = "Tiles: " + t2;
+    document.getElementById('turnInfo').textContent =
+      (current === P1 ? "Your turn" : "Enemy turn") + " — Turn " + turn;
+  }
+
+  // ---------- Game logic ----------
+  function isValidMove(fr, fc, tr, tc) {
+    if (fr === tr && fc === tc) return false;
+    const dist = Math.abs(fr-tr) + Math.abs(fc-tc);
+    if (dist !== 1) return false;
+    const u = tiles[fr][fc].unit;
+    if (!u || u.acted || u.owner !== current) return false;
+    return true;
+  }
+
+  function tryMove(fr, fc, tr, tc) {
+    const from = tiles[fr][fc];
+    const to = tiles[tr][tc];
+    const attacker = from.unit;
+
+    if (!to.unit) {
+      // move & capture
+      to.unit = attacker;
+      to.unit.acted = true;
+      to.owner = attacker.owner;
+      from.unit = null;
+      addLog((attacker.owner === P1 ? "You" : "Enemy") + " advanced and claimed a tile.");
+    } else if (to.unit.owner !== attacker.owner) {
+      // combat
+      const defender = to.unit;
+      const atkRoll = attacker.atk * (0.8 + Math.random() * 0.4);
+      const defRoll = defender.atk * (0.8 + Math.random() * 0.4);
+      if (atkRoll > defRoll) {
+        const dmg = Math.round(defRoll / 2);
+        attacker.hp -= dmg;
+        addLog((attacker.owner === P1 ? "You" : "Enemy") + "'s " + UNIT_TYPES[attacker.type].name +
+          " defeated a " + UNIT_TYPES[defender.type].name + "!");
+        if (attacker.hp <= 0) {
+          from.unit = null;
+          addLog("But it was destroyed in the process.");
+        } else {
+          attacker.acted = true;
+          to.unit = attacker;
+          to.owner = attacker.owner;
+          from.unit = null;
+        }
+      } else {
+        const dmg = Math.round(atkRoll / 2);
+        defender.hp -= dmg;
+        attacker.acted = true;
+        from.unit = attacker; // stays, acted
+        addLog((attacker.owner === P1 ? "Your" : "Enemy's") + " attack was repelled" +
+          (defender.hp <= 0 ? " but the defender fell too!" : "."));
+        if (defender.hp <= 0) to.unit = null;
+      }
+    }
+    selected = null;
+    checkWin();
+    draw();
+    updateHud();
+  }
+
+  function checkWin() {
+    // base captured?
+    const b1owner = tiles[bases[1].r][bases[1].c].owner;
+    const b2owner = tiles[bases[2].r][bases[2].c].owner;
+    if (b1owner === P2) return endGame(P2, "The enemy captured your base.");
+    if (b2owner === P1) return endGame(P1, "You captured the enemy base!");
+
+    // unit wipeout (only counts after first couple turns to avoid instant end)
+    const counts = countUnits();
+    if (turn > 2 && counts[1] === 0) return endGame(P2, "Your army was wiped out.");
+    if (turn > 2 && counts[2] === 0) return endGame(P1, "You wiped out the enemy army!");
+  }
+
+  function countUnits() {
+    const c = { 1: 0, 2: 0 };
+    for (let r = 0; r < ROWS; r++) for (let cc = 0; cc < COLS; cc++) {
+      const u = tiles[r][cc].unit;
+      if (u) c[u.owner]++;
+    }
+    return c;
+  }
+
+  function endGame(winner, reason) {
+    gameOver = true;
+    document.getElementById('overlayTitle').textContent = winner === P1 ? "Victory!" : "Defeat";
+    document.getElementById('overlaySub').textContent = reason;
+    document.getElementById('overlay').classList.add('show');
+  }
+
+  function endTurnByLimit() {
+    let t1 = 0, t2 = 0;
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (tiles[r][c].owner === P1) t1++;
+      if (tiles[r][c].owner === P2) t2++;
+    }
+    if (t1 === t2) endGame(P1, "Turn limit reached — it's a draw (tiebreak favors you).");
+    else endGame(t1 > t2 ? P1 : P2, "Turn limit reached. Final tiles — You: " + t1 + " Enemy: " + t2);
+  }
+
+  function startTurn(player) {
+    current = player;
+    let tileCount = 0;
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      const t = tiles[r][c];
+      if (t.owner === player) tileCount++;
+      if (t.unit && t.unit.owner === player) t.unit.acted = false;
+    }
+    gold[player] += 5 + tileCount * 2;
+    updateHud();
+    draw();
+    if (player === P2) {
+      setTimeout(runAiTurn, 500);
+    }
+  }
+
+  function endTurn() {
+    if (gameOver) return;
+    selected = null;
+    if (current === P1) {
+      startTurn(P2);
+    } else {
+      turn++;
+      if (turn > MAX_TURNS) { endTurnByLimit(); return; }
+      startTurn(P1);
+    }
+  }
+
+  // ---------- Recruiting ----------
+  function openRecruitModal() {
+    const base = bases[current];
+    if (tiles[base.r][base.c].unit) {
+      addLog("Base is occupied — move that unit before recruiting.");
+      return;
+    }
+    const wrap = document.getElementById('unitOptions');
+    wrap.innerHTML = '';
+    Object.entries(UNIT_TYPES).forEach(([key, u]) => {
+      const affordable = gold[current] >= u.cost;
+      const div = document.createElement('div');
+      div.className = 'unitOption' + (affordable ? '' : ' disabled');
+      div.innerHTML = `<div><div class="name">${u.name}</div><div class="stats">HP ${u.hp} · ATK ${u.atk} · Cost ${u.cost}g</div></div>`;
+      const btn = document.createElement('button');
+      btn.textContent = 'Recruit';
+      btn.disabled = !affordable;
+      btn.onclick = () => {
+        gold[current] -= u.cost;
+        placeUnit(base.r, base.c, current, key);
+        tiles[base.r][base.c].unit.acted = true;
+        addLog((current === P1 ? "You" : "Enemy") + " recruited a " + u.name + ".");
+        closeModal();
+        updateHud();
+        draw();
+      };
+      div.appendChild(btn);
+      wrap.appendChild(div);
+    });
+    document.getElementById('modalOverlay').classList.add('show');
+  }
+  function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+
+  // ---------- Input ----------
+  canvas.addEventListener('click', (e) => {
+    if (gameOver || current !== P1) return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    const c = Math.floor(x / CELL);
+    const r = Math.floor(y / CELL);
+    if (!inBounds(r, c)) return;
+    const t = tiles[r][c];
+
+    if (selected) {
+      if (selected.r === r && selected.c === c) {
+        selected = null; draw(); return;
+      }
+      if (isValidMove(selected.r, selected.c, r, c)) {
+        tryMove(selected.r, selected.c, r, c);
+        return;
+      }
+      // reselect if clicking own unit
+      if (t.unit && t.unit.owner === P1 && !t.unit.acted) {
+        selected = { r, c };
+        draw();
+        return;
+      }
+      if (t.isBase && t.owner === P1) { openRecruitModal(); selected = null; draw(); return; }
+      selected = null; draw();
+      return;
+    }
+
+    if (t.unit && t.unit.owner === P1 && !t.unit.acted) {
+      selected = { r, c };
+      draw();
+    } else if (t.isBase && t.owner === P1) {
+      openRecruitModal();
+    }
+  });
+
+  document.getElementById('endTurnBtn').addEventListener('click', endTurn);
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    document.getElementById('overlay').classList.remove('show');
+    newGame();
+  });
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  document.getElementById('overlayRestart').addEventListener('click', () => {
+    document.getElementById('overlay').classList.remove('show');
+    newGame();
+  });
+
+  // ---------- Simple AI ----------
+  function runAiTurn() {
+    if (gameOver) { return; }
+
+    // maybe recruit
+    const base = bases[P2];
+    if (!tiles[base.r][base.c].unit) {
+      if (gold[P2] >= UNIT_TYPES.tank.cost && Math.random() < 0.6) {
+        gold[P2] -= UNIT_TYPES.tank.cost;
+        placeUnit(base.r, base.c, P2, 'tank');
+        tiles[base.r][base.c].unit.acted = true;
+        addLog("Enemy recruited a Tank.");
+      } else if (gold[P2] >= UNIT_TYPES.infantry.cost) {
+        gold[P2] -= UNIT_TYPES.infantry.cost;
+        placeUnit(base.r, base.c, P2, 'infantry');
+        tiles[base.r][base.c].unit.acted = true;
+        addLog("Enemy recruited Infantry.");
+      }
+    }
+    updateHud();
+    draw();
+
+    // gather AI units
+    const aiUnits = [];
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      const u = tiles[r][c].unit;
+      if (u && u.owner === P2 && !u.acted) aiUnits.push({ r, c });
+    }
+
+    let i = 0;
+    function step() {
+      if (gameOver) return;
+      if (i >= aiUnits.length) {
+        setTimeout(endTurn, 300);
+        return;
+      }
+      const { r, c } = aiUnits[i];
+      i++;
+      const unit = tiles[r][c].unit;
+      if (!unit || unit.acted) { step(); return; }
+
+      const opts = neighbors(r, c);
+      // priority 1: attack adjacent enemy unit
+      let target = opts.find(([rr, cc]) => tiles[rr][cc].unit && tiles[rr][cc].unit.owner === P1);
+      // priority 2: capture unowned/enemy empty tile
+      if (!target) target = opts.find(([rr, cc]) => !tiles[rr][cc].unit && tiles[rr][cc].owner !== P2);
+      // priority 3: move toward player base
+      if (!target) {
+        opts.sort((a, b) => {
+          const da = Math.abs(a[0]-bases[1].r) + Math.abs(a[1]-bases[1].c);
+          const db = Math.abs(b[0]-bases[1].r) + Math.abs(b[1]-bases[1].c);
+          return da - db;
+        });
+        target = opts.find(([rr, cc]) => !tiles[rr][cc].unit || tiles[rr][cc].unit.owner !== P2);
+      }
+      if (target) {
+        tryMove(r, c, target[0], target[1]);
+      }
+      setTimeout(step, 350);
+    }
+    setTimeout(step, 300);
+  }
+
+  newGame();
+})();
+</script>
+</body>
+</html>
